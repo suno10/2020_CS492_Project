@@ -142,6 +142,12 @@ barplot(title_length_effect$views, names=title_length_effect$length_range,
         xlab='Length of the title', ylab='Avg number of views (thousand)')
 
 # 2. Category
+summary(aov(views~category_id, data=KRvideos))
+summary(lm(views~category_id, data=KRvideos))
+    # p < 0.05
+    # F = 236.1 (A very large F-value)
+    # We conclude that category has a significant effect on view counts.
+
 category_df <- KRvideos %>% group_by(category_id) %>%
   summarise(views=mean(views)/1000) %>%
   arrange(desc(views))
