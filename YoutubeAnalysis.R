@@ -11,7 +11,7 @@ library(ggplot2)
 library(lubridate)
 library(stringr)
 library(wordcloud)
-library(RColorBrewer)
+library(nortest)
 
 KRvideos <- read_csv("Downloads/archive/KRvideos.csv")
 View(KRvideos)
@@ -53,6 +53,7 @@ levels(category_id)
 pie(summary(category_id), main='Proportions of each category')
 
 cnt_id <- KRvideos %>% group_by(category_id) %>% summarise(n=n())
+
 ggplot(data=cnt_id, aes(as.factor(category_id), n)) +
   geom_bar(stat='identity', fill=1:17) +
   theme_bw() + labs(x='Category id', y='Count of videos') +
@@ -130,11 +131,20 @@ title_df <- within(title_df, {
                                             "60-70", "70-80", "80-90", "90-100"))
  })
 
-summary(aov(views~length_range, data=title_df))
-summary(lm(views~length, data=title_df))
-    # p < 0.05
-    # F = 15.39 (A large F-value)
+table(title_df$length_range)
+
+by(title_df$views, title_df$length_range, cvm.test)
+    # it doesn't follow normal distribution, so we can't execute ANOVA test
+
+kruskal.test(views~length_range, data=title_df)
+    # p < 0.05 (A very small p-value)
     # We conclude that length of the title has a significant effect on view counts.
+
+#test.set <- title_df %>% filter(views > 10000000)
+test.set <- title_df %>% arrange(desc(views)) %>% head(500)
+table(test.set$length_range)
+boxplot(views~length_range, data=test.set, main='Top 500 videos',
+        xlab='length_range of the title', ylab='view counts')
 
 title_length_effect <- title_df %>% group_by(length_range) %>% summarise(views = mean(views))
 title_length_effect$views <- round(title_length_effect$views/1000)
@@ -142,17 +152,23 @@ barplot(title_length_effect$views, names=title_length_effect$length_range,
         xlab='Length of the title', ylab='Avg number of views (thousand)')
 
 # 2. Category
-summary(aov(views~category_id, data=KRvideos))
-summary(lm(views~category_id, data=KRvideos))
-    # p < 0.05
-    # F = 236.1 (A very large F-value)
+test.set <- filter(KRvideos, category_id != 44)
+    # there are only 2 videos whose category ID is 44
+    # for more accurate test, we eliminated these 2 videos in testset
+by(test.set$views, test.set$category_id, cvm.test)
+    # it doesn't follow normal distribution, so we can't execute ANOVA test
+
+kruskal.test(views~category_id, data=test.set)
+    # p < 0.05 (A very small p-value)
     # We conclude that category has a significant effect on view counts.
 
 category_df <- KRvideos %>% group_by(category_id) %>%
   summarise(views=mean(views)/1000) %>%
   arrange(desc(views))
+
 barplot(category_df$views, names=category_df$category_id,
         xlab='Category ID', ylab='Avg number of views (thousand)', col=1:17)
+table(category_id)
 
 # 3. Allow comment & Rating
 high_view_videos <- filter(KRvideos, views > 2000000) %>%
@@ -161,10 +177,12 @@ high_view_videos <- filter(KRvideos, views > 2000000) %>%
 high_view_videos %>% summarise(views=mean(views))
 boxplot(high_view_videos$views~high_view_videos$comments_disabled+high_view_videos$ratings_disabled)
 
-# 4. Publish date & Publish time
+# 4. Common words in title
 
-# 5. Common tags
+# 5. Common tags / number of the tags
 
-# 6. Descriptions
+# 6. Common words in descriptions
+
+# 7. Comments/ratings/subscribes in descriptions
 
 ###############     3.  Case study for trending video     ###############
