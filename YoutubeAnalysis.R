@@ -121,17 +121,24 @@ lines(x, y, col='red', type='l')
 plot(log(dislikes), likes, pch=21, bg='blue')
 lines(log(x), y, col='red')
 
-# 7. Allow comment & Rating
+# 7. Comments and Ratings
 table(comments_disabled, ratings_disabled)
-
-# 8. Comment count
 summary(comment_count)
 
-# 9. Views
-summary(views)
+# 8. Publish_time
+time_hour=as.numeric(substr(publish_time,1,2))
+ggplot(data=KRvideos,aes(time_hour))+geom_bar(fill= 1:24)+
+  labs(x='Time (hour)', y='Count of videos')+
+  theme(axis.title=element_text(size=9))
+sort(table(time_hour),decreasing=T)[1:6]
 
-# 10. Publish_time
+time_group=3*floor(time_hour/3)
+time_group1=paste(time_group>10,time_group-12*(time_group>10),'~',time_group+3-12*(time_group>10),'??')
+time_group2=gsub("TRUE","????",time_group1)
+time_group3=gsub("FALSE","????",time_group2)
 
+ggplot(KRvideos, aes(category_id, fill=time_group3))+
+  theme(legend.title=element_blank())+ geom_bar(position='fill')+labs(y='',x='Category ID') 
 
 ###############      2.  Analysis of ranking factors      ###############
 
@@ -199,7 +206,7 @@ allow_comment_rating <- group_by(high_view_videos, comments_disabled, ratings_di
 allow_comment_rating %>% summarise(views=mean(views))
 boxplot(allow_comment_rating$views~allow_comment_rating$comments_disabled+allow_comment_rating$ratings_disabled)
 
-# 4. Common tags / number of the tags
+# 4. Number of the tags
 tag_df <- data.frame(views=views, tags=num_tag)
 tag_df <- within(tag_df, {
   num_tag = character(0)
@@ -234,11 +241,33 @@ tag_df_avg <- tag_df %>% group_by(num_tag) %>%
 barplot(tag_df_avg$mean_views, names=tag_df_avg$num_tag,
         xlab='Number of the tags', ylab='Avg number of views (thousand)', col=1:10)
 
-# 5. Common words in title
+# 5. Common words in tags
+tags1 <- KRvideos$tags
+df_noun1<-as.vector(df_noun[,1])
 
-# 6. Common words in descriptions
+l=list()
+for (i in 1:10) l<-append(l,rep(F,34567))
+for (i in 1:100){
+  for(j in 1:10) l[[j]]=l[[j]]|str_detect(tags1,df_noun1[i+100*(j-1)])
+}
 
-# 7. Comments/ratings/subscribes in descriptions
+l1=list()
+for (i in 1:10) l1=append(l1,mean(views[l[[i]]][1:100]))
+l1<-unlist(l1)
+barplot(l1, ylab = "Number of views", col=2:11, xlab="Contains most used tags <--------> Contains less used tags (Unit: 100Tags)")
+
+c<-rep(F,34567)
+for (i in 1:1000) c=c|str_detect(tags1,df_noun1[i])
+tags1000_views = data.frame(True=log(views[c][1:100]),False=log(views[!c][1:100]))
+boxplot(tags1000_views,xlab="Contains Top 1000 most used tags", ylab="ln(views)", col=c("green","yellow"))
+summary(views[c][1:100])
+summary(views[!c][1:100])
+
+# 6. Common words in title
+
+# 7. Common words in descriptions
+
+# 8. Comments/ratings/subscribes in descriptions
 
 ###############     3.  Case study for trending video     ###############
 
