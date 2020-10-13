@@ -60,30 +60,41 @@ ggplot(data=cnt_id, aes(as.factor(category_id), n)) +
   theme(axis.title=element_text(size=9))
 
 # 3. Tag
-tags <- tags[!is.na(tags)]
 tags <- strsplit(tags, fixed=TRUE, split="\"")
 
-noun=c()
+noun <- c()
+num_tag <- c()
+
 # !!!!!! WARNING: below command takes very long time !!!!!!
 for(i in 1:length(tags)){
   txt = tags[[i]]
+  
+  if (txt[1] == "[none]") {
+    num_tag=c(num_tag, 0)
+    next
+  }
   txt[1] <- gsub('|', "", txt[1], fixed=TRUE)
   txt <- txt[txt != '|'] %>% tolower()
+  num_tag=c(num_tag, length(tags[[i]]))
   noun=c(noun, txt)
 }
 
 rm(txt, i)
 df_noun <- as.data.frame(table(noun))
 df_noun <- filter(df_noun, Freq >= 2) %>% arrange(desc(Freq))
-df_noun <- df_noun[-1,]
+head(df_noun)
 
 set.seed(20170459)
 wordcloud(words=df_noun$noun, freq=df_noun$Freq, max.words=100,
           random.order = F, colors=brewer.pal(8, "Dark2"),
           family="AppleGothic", rot.per=.1, scale=c(3, 0.4))
 
+summary(num_tag)
+boxplot(num_tag, col='yellow', outline=FALSE, main='Number of tags')
+
 # 4. Top 10 Videos
-unique(KRvideos[,'title']) %>% head(10)
+head(KRvideos[,'title'], 10)
+head(unique(KRvideos[,'title']), 10)
 
 # 5. Correlation between Publish date and Trending date
 period <- interval(publish_date, trending_date) %>% as.period() %>% day()
@@ -100,15 +111,27 @@ filter(period_df, Freq >= 10) %>%
 cor.test(likes, dislikes)
 pairs(KRvideos[,8:9])
 
-lm_likes <- lm(likes~dislikes)
-summary(lm_likes)
-plot(dislikes, likes, pch=21, bg='black')
-lines(dislikes, lm_likes$fitted.values, col='red')
+poly_model <- lm(likes~poly(dislikes, 3, raw=T))
+x <- with(KRvideos, seq(min(dislikes), max(dislikes)))
+y <- predict(poly_model, newdata = data.frame(dislikes=x))
 
-plot(dislikes, likes, pch=21, bg='blue',cex=0.7, log = "x")
+plot(dislikes, likes)
+lines(x, y, col='red', type='l')
+
+plot(log(dislikes), likes, pch=21, bg='blue')
+lines(log(x), y, col='red')
 
 # 7. Allow comment & Rating
 table(comments_disabled, ratings_disabled)
+
+# 8. Comment count
+summary(comment_count)
+
+# 9. Views
+summary(views)
+
+# 10. Publish_time
+
 
 ###############      2.  Analysis of ranking factors      ###############
 
@@ -140,7 +163,6 @@ kruskal.test(views~length_range, data=title_df)
     # p < 0.05 (A very small p-value)
     # We conclude that length of the title has a significant effect on view counts.
 
-#test.set <- title_df %>% filter(views > 10000000)
 test.set <- title_df %>% arrange(desc(views)) %>% head(500)
 table(test.set$length_range)
 boxplot(views~length_range, data=test.set, main='Top 500 videos',
@@ -171,18 +193,52 @@ barplot(category_df$views, names=category_df$category_id,
 table(category_id)
 
 # 3. Allow comment & Rating
-high_view_videos <- filter(KRvideos, views > 2000000) %>%
-  group_by(comments_disabled, ratings_disabled)
+high_view_videos <- filter(KRvideos, views > 2000000)
+allow_comment_rating <- group_by(high_view_videos, comments_disabled, ratings_disabled)
 
-high_view_videos %>% summarise(views=mean(views))
-boxplot(high_view_videos$views~high_view_videos$comments_disabled+high_view_videos$ratings_disabled)
+allow_comment_rating %>% summarise(views=mean(views))
+boxplot(allow_comment_rating$views~allow_comment_rating$comments_disabled+allow_comment_rating$ratings_disabled)
 
-# 4. Common words in title
+# 4. Common tags / number of the tags
+tag_df <- data.frame(views=views, tags=num_tag)
+tag_df <- within(tag_df, {
+  num_tag = character(0)
+  num_tag[tags<20] = "0-20"
+  num_tag[tags>=20 & tags<40] = "20-40"
+  num_tag[tags>=40 & tags<60] = "40-60"
+  num_tag[tags>=60 & tags<80] = "60-80"
+  num_tag[tags>=80 & tags<100] = "80-100"
+  num_tag[tags>=100 & tags<120] = "100-120"
+  num_tag[tags>=120 & tags<140] = "120-140"
+  num_tag[tags>=140 & tags<160] = "140-160"
+  num_tag[tags>=160 & tags<180] = "160-180"
+  num_tag[tags>=180] = "180~"
+  
+  num_tag=factor(num_tag, level=c("0-20", "20-40", "40-60", "60-80", "80-100", "100-120",
+                                  "120-140", "140-160", "160-180", "180~"))
+})
 
-# 5. Common tags / number of the tags
+levels(tag_df$num_tag)
+summary(tag_df$num_tag)
+
+by(tag_df$views, tag_df$num_tag, cvm.test)
+    # it doesn't follow normal distribution, so we can't execute ANOVA test
+
+kruskal.test(views~num_tag, data=tag_df)
+    # p < 0.05 (A very small p-value)
+    # We conclude that number of the tag has a significant effect on view counts.
+
+tag_df_avg <- tag_df %>% group_by(num_tag) %>%
+  summarise(mean_views=mean(views)/1000)
+
+barplot(tag_df_avg$mean_views, names=tag_df_avg$num_tag,
+        xlab='Number of the tags', ylab='Avg number of views (thousand)', col=1:10)
+
+# 5. Common words in title
 
 # 6. Common words in descriptions
 
 # 7. Comments/ratings/subscribes in descriptions
 
 ###############     3.  Case study for trending video     ###############
+
