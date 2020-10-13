@@ -75,7 +75,7 @@ for(i in 1:length(tags)){
   }
   txt[1] <- gsub('|', "", txt[1], fixed=TRUE)
   txt <- txt[txt != '|'] %>% tolower()
-  num_tag=c(num_tag, length(tags[[i]]))
+  num_tag=c(num_tag, length(txt))
   noun=c(noun, txt)
 }
 
@@ -210,19 +210,17 @@ boxplot(allow_comment_rating$views~allow_comment_rating$comments_disabled+allow_
 tag_df <- data.frame(views=views, tags=num_tag)
 tag_df <- within(tag_df, {
   num_tag = character(0)
-  num_tag[tags<20] = "0-20"
-  num_tag[tags>=20 & tags<40] = "20-40"
-  num_tag[tags>=40 & tags<60] = "40-60"
-  num_tag[tags>=60 & tags<80] = "60-80"
+  num_tag[tags<5] = "0-5"
+  num_tag[tags>=5 & tags<10] = "5-10"
+  num_tag[tags>=10 & tags<20] = "10-20"
+  num_tag[tags>=20 & tags<30] = "20-30"
+  num_tag[tags>=30 & tags<50] = "30-50"
+  num_tag[tags>=50 & tags<80] = "50-80"
   num_tag[tags>=80 & tags<100] = "80-100"
-  num_tag[tags>=100 & tags<120] = "100-120"
-  num_tag[tags>=120 & tags<140] = "120-140"
-  num_tag[tags>=140 & tags<160] = "140-160"
-  num_tag[tags>=160 & tags<180] = "160-180"
-  num_tag[tags>=180] = "180~"
+  num_tag[tags>=100] = "100~"
   
-  num_tag=factor(num_tag, level=c("0-20", "20-40", "40-60", "60-80", "80-100", "100-120",
-                                  "120-140", "140-160", "160-180", "180~"))
+  num_tag=factor(num_tag, level=c("0-5", "5-10", "10-20", "20-30", "30-50", "50-80",
+                                  "80-100", "100~"))
 })
 
 levels(tag_df$num_tag)
