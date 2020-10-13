@@ -107,7 +107,7 @@ filter(period_df, Freq >= 10) %>%
   theme_bw() + labs(x='Period(Day)', y='Count of videos') +
   theme(axis.title=element_text(size=9))
 
-# 6. Likes & Dislikes
+# 6. Comments and Ratings (Likes & Dislikes)
 cor.test(likes, dislikes)
 pairs(KRvideos[,8:9])
 
@@ -121,11 +121,7 @@ lines(x, y, col='red', type='l')
 plot(log(dislikes), likes, pch=21, bg='blue')
 lines(log(x), y, col='red')
 
-# 7. Comments and Ratings
-table(comments_disabled, ratings_disabled)
-summary(comment_count)
-
-# 8. Publish_time
+# 7. Publish_time
 time_hour=as.numeric(substr(publish_time,1,2))
 ggplot(data=KRvideos,aes(time_hour))+geom_bar(fill= 1:24)+
   labs(x='Time (hour)', y='Count of videos')+
