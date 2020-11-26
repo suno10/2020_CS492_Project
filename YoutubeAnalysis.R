@@ -314,7 +314,6 @@ barplot(clst2$n, names.arg = clst2$category_id, col=1:9,
         main="high-view-group")
 barplot(clst3$n, names.arg = clst3$category_id, col=1:9,
         main="low-view-group")
-?barplot
 
 par(mfrow=c(2,2),mar=c(2,4,1,1))
 boxplot(views~cluster, data=res_clst, col=2:4)
