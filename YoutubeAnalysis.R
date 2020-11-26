@@ -12,6 +12,8 @@ library(lubridate)
 library(stringr)
 library(wordcloud)
 library(nortest)
+library(cluster)
+library(NbClust)
 
 KRvideos <- read_csv("Downloads/archive/KRvideos.csv")
 View(KRvideos)
@@ -84,7 +86,7 @@ df_noun <- as.data.frame(table(noun))
 df_noun <- filter(df_noun, Freq >= 2) %>% arrange(desc(Freq))
 head(df_noun)
 
-set.seed(20170459)
+set.seed(492)
 wordcloud(words=df_noun$noun, freq=df_noun$Freq, max.words=100,
           random.order = F, colors=brewer.pal(8, "Dark2"),
           family="AppleGothic", rot.per=.1, scale=c(3, 0.4))
@@ -240,7 +242,7 @@ tags1 <- KRvideos$tags
 df_noun1<-as.vector(df_noun[,1])
 
 l=list()
-for (i in 1:10) l<-append(l,rep(F,34567))
+for (i in 1:10) l<-append(l,rep(F,length(tags)))
 for (i in 1:100){
   for(j in 1:10) l[[j]]=l[[j]]|str_detect(tags1,df_noun1[i+100*(j-1)])
 }
@@ -248,20 +250,78 @@ for (i in 1:100){
 l1=list()
 for (i in 1:10) l1=append(l1,mean(views[l[[i]]][1:100]))
 l1<-unlist(l1)
-barplot(l1, ylab = "Number of views", col=2:11, xlab="Contains most used tags <--------> Contains less used tags (Unit: 100Tags)")
+barplot(l1, ylab = "Number of views", col=2:11,
+        xlab="Contains most used tags <--------> Contains less used tags (Unit: 100Tags)")
 
-c<-rep(F,34567)
+c<-rep(F,length(tags))
 for (i in 1:1000) c=c|str_detect(tags1,df_noun1[i])
 tags1000_views = data.frame(True=log(views[c][1:100]),False=log(views[!c][1:100]))
 boxplot(tags1000_views,xlab="Contains Top 1000 most used tags", ylab="ln(views)", col=c("green","yellow"))
 summary(views[c][1:100])
 summary(views[!c][1:100])
 
-# 6. Common words in title
+# 6. Clustering
+temp <- KRvideos
+temp$num_tags <- tag_df$tags
+temp$title_length <- title_df$length
+temp$is_pm <- time_hour >= 12
 
-# 7. Common words in descriptions
+clst <- rbind(head(temp, 100), tail(temp, 100))
 
-# 8. Comments/ratings/subscribes in descriptions
+common_tag=c()
 
-###############     3.  Case study for trending video     ###############
+for(i in 1:nrow(clst)){
+  for (j in 1:100) {
+    detected <- FALSE
+    if (str_detect(clst$tags[i], as.character(df_noun[j,1]))) {
+      detected = TRUE; break
+    }
+  }
+  common_tag=c(common_tag, detected)
+}
+
+colnames(clst)
+
+scaled_clst <- clst[,c(4,7,8,15,16,17)] %>% as.data.frame()
+scaled_clst$views <- scale(scaled_clst$views)
+scaled_clst$likes <- scale(scaled_clst$likes)
+scaled_clst$common_tag <- common_tag
+
+pamx <- pam(scaled_clst, 3)
+summary(pamx)
+
+res_clst <- data.frame(scaled_clst, cluster=pamx$clustering)
+
+res_clst %>%
+  select(views, num_tags, title_length, cluster, is_pm, common_tag,likes) %>%
+  group_by(cluster) %>%
+  summarise(mean_views=mean(views, na.rm = TRUE), mean_numTag=mean(num_tags),
+            mean_titleLength=mean(title_length),
+            is_pm=mean(is_pm), common_tag=mean(common_tag),
+            mean_likes=mean(likes))
+
+clst1 <- res_clst %>% filter(cluster==1) %>% group_by(category_id) %>%
+  summarise(n=n()) %>% arrange(desc(n))
+clst2 <- res_clst %>% filter(cluster==2) %>% group_by(category_id) %>%
+  summarise(n=n()) %>% arrange(desc(n))
+clst3 <- res_clst %>% filter(cluster==3) %>% group_by(category_id) %>%
+  summarise(n=n()) %>% arrange(desc(n))
+
+par(mfrow=c(3,1))
+barplot(clst1$n, names.arg = clst1$category_id, col=1:9,
+        main="middle-view-group")
+barplot(clst2$n, names.arg = clst2$category_id, col=1:9,
+        main="high-view-group")
+barplot(clst3$n, names.arg = clst3$category_id, col=1:9,
+        main="low-view-group")
+?barplot
+
+par(mfrow=c(2,2),mar=c(2,4,1,1))
+boxplot(views~cluster, data=res_clst, col=2:4)
+boxplot(num_tags~cluster, data=res_clst, col=2:4)
+boxplot(title_length~cluster, data=res_clst, col=2:4)
+boxplot(likes~cluster, data=res_clst, col=2:4)
+par(mfrow=c(1,1))
+
+##########     3.  Detailed Analysis on Entertainment category     ##########
 
