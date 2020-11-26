@@ -266,7 +266,7 @@ temp$num_tags <- tag_df$tags
 temp$title_length <- title_df$length
 temp$is_pm <- time_hour >= 12
 
-clst <- rbind(head(temp, 100), tail(temp, 100))
+clst <- rbind(head(temp, 100), tail(temp, 100), temp[17231:17330,])
 
 common_tag=c()
 
