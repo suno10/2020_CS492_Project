@@ -15,7 +15,8 @@ library(nortest)
 library(cluster)
 library(NbClust)
 
-KRvideos <- read_csv("Downloads/archive/KRvideos.csv")
+# Please download KRvideos file first.
+KRvideos <- read_csv("Downloads/KRvideos.csv")
 View(KRvideos)
 colnames(KRvideos)
 summary(KRvideos)
@@ -264,7 +265,7 @@ summary(views[!c][1:100])
 temp <- KRvideos
 temp$num_tags <- tag_df$tags
 temp$title_length <- title_df$length
-temp$is_pm <- time_hour >= 12
+temp$is_pm <- time_hour >= 12 # when the video published? (a.m. or p.m.)
 
 clst <- rbind(head(temp, 100), tail(temp, 100), temp[17231:17330,])
 
@@ -284,11 +285,12 @@ colnames(clst)
 
 scaled_clst <- clst[,c(4,7,8,15,16,17)] %>% as.data.frame()
 scaled_clst$views <- scale(scaled_clst$views)
-scaled_clst$likes <- scale(scaled_clst$likes)
-scaled_clst$common_tag <- common_tag
+scaled_clst$likes <- scale(scaled_clst$li kes)
+scaled_clst$common_tag <- common_tag # if the video has one of the top 100 tag the value of 'common tag' is 1, else 0
 
 pamx <- pam(scaled_clst, 3)
 summary(pamx)
+plot(pamx)
 
 res_clst <- data.frame(scaled_clst, cluster=pamx$clustering)
 
