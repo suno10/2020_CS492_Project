@@ -4,7 +4,7 @@
 
 (suno10, naahah)@kaist.ac.kr
 
-# Data Analysis of YouTube Tending Videos in R
+# Data Analysis of YouTube Trending Videos in R
 
 Nowadays, the online video market is starting to be more and more competitive under the broadening influence of YouTube, which is the very famous social media platform all over the world. So the creators should develop their ability to quickly analyze new trends and suggest effective strategies to survive in the market, as this change goes through.
 
